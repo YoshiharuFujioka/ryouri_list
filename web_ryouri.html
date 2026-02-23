@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CSV → 料理ビュー</title>
+  <title>料理ビュー（CSV → タイル）</title>
   <style>
     :root{
       --border:#cfcfcf;
@@ -11,7 +11,9 @@
       --muted:#666;
       --shadow: 0 1px 3px rgba(0,0,0,.12);
       --cardW: 320px;
-      --iframeH: 280px;
+      --previewH: 280px;
+      --radius: 12px;
+      --blue:#0b57d0;
     }
     body{
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
@@ -24,33 +26,17 @@
       display:flex;
       flex-wrap:wrap;
       gap:12px;
-      align-items:center;
+      align-items:flex-end;
       justify-content:space-between;
-      margin-bottom:16px;
+      margin-bottom:10px;
     }
-    h1{
-      font-size:18px;
-      margin:0;
-    }
+    h1{ font-size:18px; margin:0; }
     .controls{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
     }
-    .drop{
-      border:2px dashed var(--border);
-      background:var(--bg);
-      padding:10px 12px;
-      border-radius:10px;
-      box-shadow: var(--shadow);
-      min-width: 320px;
-    }
-    .drop.dragover{
-      border-color:#2b7cff;
-      background:#eef5ff;
-    }
-    .drop small{ color:var(--muted); display:block; margin-top:4px; }
     .btn{
       border:1px solid var(--border);
       background:var(--bg);
@@ -58,8 +44,49 @@
       border-radius:10px;
       cursor:pointer;
       box-shadow: var(--shadow);
+      font-size:13px;
     }
     .btn:hover{ border-color:#888; }
+    input[type="file"]{ display:none; }
+    .pill{
+      border:1px solid var(--border);
+      padding:6px 10px;
+      border-radius:999px;
+      background:#fff;
+      font-size:12px;
+      color:#333;
+      box-shadow: var(--shadow);
+    }
+
+    .bar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .bar input, .bar select{
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:13px;
+      background:#fff;
+      box-shadow: var(--shadow);
+    }
+
+    .status{
+      margin: 0 0 14px;
+      color:#333;
+      font-size:12px;
+      line-height:1.6;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px 10px;
+      box-shadow: var(--shadow);
+    }
+    .status .muted{ color:var(--muted); }
+
     .grid{
       display:grid;
       grid-template-columns: repeat(auto-fill, minmax(var(--cardW), 1fr));
@@ -69,7 +96,7 @@
     .card{
       background:var(--bg);
       border:1px solid var(--border);
-      border-radius:12px;
+      border-radius:var(--radius);
       box-shadow: var(--shadow);
       overflow:hidden;
     }
@@ -94,92 +121,112 @@
     .stars{
       font-size:13px;
       color:#111;
+      letter-spacing:.5px;
     }
     .link{
       display:block;
       padding:8px 12px;
       font-size:12px;
-      color:#0b57d0;
+      color:var(--blue);
       text-decoration:none;
       word-break:break-all;
       border-bottom:1px solid #eee;
       background:#fafafa;
     }
+
     .preview{
       position:relative;
       width:100%;
-      height:var(--iframeH);
+      height:var(--previewH);
       background:#111;
     }
+
+    /* 画像優先表示 */
+    .imgwrap{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#111;
+    }
+    .imgwrap img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    /* iframeプレビュー */
     iframe{
       width:100%;
       height:100%;
       border:0;
-      background:white;
+      background:#fff;
+      display:block;
     }
-    .blocked{
-      position:absolute;
-      inset:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:14px;
-      text-align:center;
-      color:#fff;
-      background:linear-gradient(135deg, rgba(0,0,0,.7), rgba(0,0,0,.85));
-      font-size:13px;
-    }
-    .blocked a{ color:#9ad1ff; }
-    .footer{
+
+    .note{
       margin-top:14px;
       color:var(--muted);
       font-size:12px;
       line-height:1.6;
     }
-    .row{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    input[type="file"]{ display:none; }
-    .pill{
-      border:1px solid var(--border);
-      padding:6px 10px;
-      border-radius:999px;
-      background:#fff;
-      font-size:12px;
-      color:#333;
-      box-shadow: var(--shadow);
-    }
+    code{ background:#f0f0f0; padding:0 4px; border-radius:4px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>CSV → 料理ビュー（カード表示）</h1>
+    <h1>料理ビュー（CSV → タイル表示）</h1>
     <div class="controls">
-      <label class="btn" for="file">CSVを選択</label>
+      <button class="btn" id="reload">CSV再読み込み（fetch）</button>
+      <label class="btn" for="file">CSVを選択（確実）</label>
       <input id="file" type="file" accept=".csv,text/csv" />
-      <button class="btn" id="loadSample">サンプル読み込み</button>
       <span class="pill" id="count">0 件</span>
     </div>
   </header>
 
-  <div class="drop" id="drop">
-    ここにCSVをドラッグ&ドロップ
-    <small>形式: <code>#,料理名,評価,URL</code>（ヘッダ行あり）</small>
+  <div class="bar">
+    <input id="q" type="text" placeholder="検索（料理名 / URL）" />
+    <select id="sort">
+      <option value="no">並び：#順</option>
+      <option value="ratingDesc">並び：評価（高→低）</option>
+      <option value="ratingAsc">並び：評価（低→高）</option>
+      <option value="title">並び：料理名（あいうえお）</option>
+    </select>
   </div>
 
-  <div style="height:14px"></div>
+  <div class="status" id="status">
+    ステータス：<span class="muted">未読み込み</span>
+  </div>
 
   <main class="grid" id="grid"></main>
 
-  <div class="footer">
-    <strong>注意:</strong> 一部サイトはセキュリティ設定により埋め込み(iframe)がブロックされ、プレビューが表示できません。その場合はリンクから別タブで開いてください。
+  <div class="note">
+    <strong>仕様:</strong> CSVに画像名があれば <code>ryouri_image/画像名</code> を優先表示します。画像名が空（または画像が存在しない）場合はURLをiframeで表示します。<br/>
+    <strong>注意:</strong> サイト側が埋め込みを禁止していると iframe は表示されない場合があります（その場合はリンクから別タブで開いてください）。<br/>
+    <strong>ヒント:</strong> <code>file://</code> 直開きだとfetchが失敗しがちなので、「CSVを選択（確実）」が一番確実です。
   </div>
 
 <script>
-  // ---- かんたんCSVパーサ（ダブルクォート対応、カンマ区切り）----
+  // =======================
+  // 設定
+  // =======================
+  const CSV_PATH = "ryouri_list.csv";
+  const IMAGE_DIR = "ryouri_image"; // フォルダ名（末尾スラッシュ不要）
+
+  const statusEl = document.getElementById('status');
+
+  function setStatus(msg, isError=false){
+    statusEl.innerHTML = "ステータス： " + (isError
+      ? `<span style="color:#b00020">${escapeHtml(msg)}</span>`
+      : `<span class="muted">${escapeHtml(msg)}</span>`
+    );
+  }
+
+  // =======================
+  // CSVパース（ダブルクォート対応）
+  // =======================
   function parseCSV(text) {
     const rows = [];
     let row = [];
@@ -190,12 +237,9 @@
       const c = text[i];
       const next = text[i+1];
 
-      if (c === '"' ) {
-        if (inQuotes && next === '"') { // "" -> "
-          cur += '"'; i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
+      if (c === '"') {
+        if (inQuotes && next === '"') { cur += '"'; i++; }
+        else { inQuotes = !inQuotes; }
       } else if (c === ',' && !inQuotes) {
         row.push(cur); cur = '';
       } else if ((c === '\n' || c === '\r') && !inQuotes) {
@@ -207,30 +251,123 @@
         cur += c;
       }
     }
-    // last
     row.push(cur);
     if (row.some(v => v.trim() !== '')) rows.push(row);
     return rows;
   }
 
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, m => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  function starText(n){
+    const num = Math.max(0, Math.min(5, parseInt(n,10) || 0));
+    const stars = "★★★★★☆☆☆☆☆".slice(5-num, 10-num); // 5文字
+    return { label: `星 ${num}`, stars };
+  }
+
   function normalizeHeaders(headers){
-    // 例: "#", "料理名", "評価", "URL"
     const map = {};
     headers.forEach((h, idx) => map[h.trim()] = idx);
     return map;
   }
 
-  function starText(n){
-    const num = Math.max(0, Math.min(5, parseInt(n,10) || 0));
-    // 「星5」表記 + 視覚用の★
-    const stars = "★★★★★☆☆☆☆☆".slice(5-num, 10-num); // 5文字
-    return { label: `星 ${num}`, stars };
+  function csvToItems(text){
+    const rows = parseCSV(String(text).trim());
+    if (!rows.length) return [];
+
+    // BOM対策
+    if (rows[0][0]) rows[0][0] = rows[0][0].replace(/^\uFEFF/, '');
+
+    const header = rows[0].map(x => (x ?? '').trim());
+    const idx = normalizeHeaders(header);
+
+    // 必須列（ヘッダあり前提）
+    const hasHeader = header.includes('料理名') && header.includes('評価') && header.includes('URL');
+    if (!hasHeader){
+      setStatus("CSVヘッダが想定と違います（料理名/評価/URL が見つかりません）", true);
+    }
+
+    // 画像名列
+    const imgIdx = header.indexOf('画像名');
+
+    const dataRows = rows.slice(1);
+    const items = [];
+
+    for (const r of dataRows){
+      if (!r || !r.length) continue;
+
+      const no     = r[idx['#']] ?? r[0];
+      const title  = r[idx['料理名']] ?? r[1];
+      const rating = r[idx['評価']] ?? r[2];
+      const url    = r[idx['URL']] ?? r[3];
+
+      let img = '';
+      if (imgIdx >= 0) img = r[imgIdx] ?? '';
+      else if (r.length >= 5) img = r[4] ?? ''; // 念のためヘッダ無し/欠損にも対応
+
+      if (!url) continue;
+
+      items.push({
+        no: (no ?? '').trim(),
+        title: (title ?? '').trim(),
+        rating: (rating ?? '').trim(),
+        url: (url ?? '').trim(),
+        imageName: (img ?? '').trim()
+      });
+    }
+    return items;
+  }
+
+  // =======================
+  // 表示（検索・ソート）
+  // =======================
+  let allItems = [];
+
+  function applyFilterAndRender(){
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const sort = document.getElementById('sort').value;
+
+    let items = allItems.slice();
+
+    if (q){
+      items = items.filter(it =>
+        (it.title || '').toLowerCase().includes(q) ||
+        (it.url || '').toLowerCase().includes(q)
+      );
+    }
+
+    items.sort((a,b) => {
+      const ra = parseInt(a.rating,10) || 0;
+      const rb = parseInt(b.rating,10) || 0;
+      const na = (parseInt(a.no,10)||0);
+      const nb = (parseInt(b.no,10)||0);
+
+      if (sort === 'ratingDesc') return (rb - ra) || (na - nb);
+      if (sort === 'ratingAsc')  return (ra - rb) || (na - nb);
+      if (sort === 'title')      return (a.title||'').localeCompare(b.title||'', 'ja');
+      return (na - nb);
+    });
+
+    render(items);
   }
 
   function render(items){
     const grid = document.getElementById('grid');
     grid.innerHTML = '';
     document.getElementById('count').textContent = `${items.length} 件`;
+
+    if (!items.length){
+      const empty = document.createElement('div');
+      empty.style.color = "#666";
+      empty.style.fontSize = "13px";
+      empty.style.padding = "8px";
+      empty.textContent = "データがありません。右上の「CSVを選択（確実）」からCSVを読み込んでください。";
+      grid.appendChild(empty);
+      return;
+    }
 
     for (const it of items){
       const { label, stars } = starText(it.rating);
@@ -241,129 +378,111 @@
       const head = document.createElement('div');
       head.className = 'card-head';
       head.innerHTML = `
-        <p class="title">${escapeHtml(it.title || '')}</p>
+        <p class="title">${escapeHtml(it.title)}</p>
         <div class="meta">
           <span class="stars">${escapeHtml(label)}（${escapeHtml(stars)}）</span>
-          <span>#${escapeHtml(it.no || '')}</span>
+          <span>#${escapeHtml(it.no)}</span>
         </div>
       `;
 
-      const a = document.createElement('a');
-      a.className = 'link';
-      a.href = it.url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      a.textContent = it.url;
+      const link = document.createElement('a');
+      link.className = 'link';
+      link.href = it.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = it.url;
 
       const preview = document.createElement('div');
       preview.className = 'preview';
 
-      const frame = document.createElement('iframe');
-      frame.loading = 'lazy';
-      frame.referrerPolicy = 'no-referrer-when-downgrade';
-      frame.src = it.url;
+      // ★仕様：画像名があれば画像優先。画像が無ければ iframe にフォールバック
+      if (it.imageName){
+        const imgPath = `${IMAGE_DIR}/${it.imageName}`;
+        const imgwrap = document.createElement('div');
+        imgwrap.className = 'imgwrap';
 
-      // ブロック判定は完全にはできないが、ロードが進まない/エラーっぽい時の案内を上に置く
-      const blocked = document.createElement('div');
-      blocked.className = 'blocked';
-      blocked.innerHTML = `
-        <div>
-          <div style="font-weight:700; margin-bottom:6px;">プレビューを表示できない可能性があります</div>
-          <div style="opacity:.9; margin-bottom:8px;">
-            サイト側が埋め込みを禁止している場合、ここは表示されません。
-          </div>
-          <div>
-            <a href="${escapeAttr(it.url)}" target="_blank" rel="noopener noreferrer">別タブで開く</a>
-          </div>
-        </div>
-      `;
+        const img = document.createElement('img');
+        img.alt = it.title || 'image';
+        img.src = imgPath;
 
-      // 3秒後に案内を表示（表示できるサイトでも上に重なるので、ロードできたら非表示にする）
-      let timer = setTimeout(() => blocked.style.display = 'flex', 1200);
+        // 画像が存在しない場合のみ iframe に切り替え
+        img.addEventListener('error', () => {
+          preview.innerHTML = '';
+          preview.appendChild(buildIFramePreview(it.url));
+        });
 
-      frame.addEventListener('load', () => {
-        // loadイベントが来れば大抵は表示できているので案内を消す
-        clearTimeout(timer);
-        blocked.style.display = 'none';
-      });
-
-      preview.appendChild(frame);
-      preview.appendChild(blocked);
+        imgwrap.appendChild(img);
+        preview.appendChild(imgwrap);
+      } else {
+        preview.appendChild(buildIFramePreview(it.url));
+      }
 
       card.appendChild(head);
-      card.appendChild(a);
+      card.appendChild(link);
       card.appendChild(preview);
       grid.appendChild(card);
     }
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, m => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[m]));
+  // =======================
+  // iframeプレビュー（タイムアウト/オーバーレイ無し版）
+  // =======================
+  function buildIFramePreview(url){
+    const frame = document.createElement('iframe');
+    frame.loading = 'lazy';
+    frame.referrerPolicy = 'no-referrer-when-downgrade';
+    frame.src = url;
+    return frame;
   }
-  function escapeAttr(s){
-    return String(s).replace(/"/g, '&quot;');
+
+  // =======================
+  // CSV読み込み
+  // =======================
+  async function loadCSVByFetch(){
+    setStatus(`fetchで ${CSV_PATH} を読み込み中...`);
+    const res = await fetch(CSV_PATH, { cache: "no-store" });
+    if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+    const text = await res.text();
+    allItems = csvToItems(text);
+    setStatus(`fetch読み込み完了：${allItems.length}件`);
+    applyFilterAndRender();
   }
 
-  function csvToItems(text){
-    const rows = parseCSV(text.trim());
-    if (!rows.length) return [];
-    const header = rows[0].map(x => x.trim());
-    const idx = normalizeHeaders(header);
+  async function loadCSVFromFile(file){
+    setStatus(`ファイルから読み込み中：${file.name}`);
+    const text = await file.text();
+    allItems = csvToItems(text);
+    setStatus(`ファイル読み込み完了：${allItems.length}件（${file.name}）`);
+    applyFilterAndRender();
+  }
 
-    // ヘッダがないケースも想定（先頭行が数字ならヘッダなし扱い）
-    const hasHeader = header.includes('料理名') && header.includes('評価') && header.includes('URL');
-
-    const dataRows = hasHeader ? rows.slice(1) : rows;
-    const items = [];
-
-    for (const r of dataRows){
-      // ヘッダありならキーで、なしなら固定位置
-      const no = hasHeader ? r[idx['#']] : r[0];
-      const title = hasHeader ? r[idx['料理名']] : r[1];
-      const rating = hasHeader ? r[idx['評価']] : r[2];
-      const url = hasHeader ? r[idx['URL']] : r[3];
-
-      if (!url) continue;
-      items.push({ no, title, rating, url });
+  document.getElementById('reload').addEventListener('click', async () => {
+    try{
+      await loadCSVByFetch();
+    }catch(e){
+      setStatus(`fetch失敗：右上の「CSVを選択（確実）」を使ってください（${e}）`, true);
     }
-    return items;
-  }
+  });
 
-  // ---- UI: ファイル選択 & DnD ----
-  const fileInput = document.getElementById('file');
-  fileInput.addEventListener('change', async (e) => {
+  document.getElementById('file').addEventListener('change', async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const text = await f.text();
-    render(csvToItems(text));
+    await loadCSVFromFile(f);
   });
 
-  const drop = document.getElementById('drop');
-  drop.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    drop.classList.add('dragover');
-  });
-  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-  drop.addEventListener('drop', async (e) => {
-    e.preventDefault();
-    drop.classList.remove('dragover');
-    const f = e.dataTransfer.files?.[0];
-    if (!f) return;
-    const text = await f.text();
-    render(csvToItems(text));
-  });
+  document.getElementById('q').addEventListener('input', applyFilterAndRender);
+  document.getElementById('sort').addEventListener('change', applyFilterAndRender);
 
-  // ---- サンプル ----
-  document.getElementById('loadSample').addEventListener('click', () => {
-    const sample = `#,料理名,評価,URL
-1,手羽元のグリル,5,https://cookpad.com/jp/recipes/20797856
-2,煮物,3,https://gyousu.love/sauce-for-simmered-food/
-3,いわしのトマト煮込み,2,https://cookpad.com/jp/recipes/21448718`;
-    render(csvToItems(sample));
-  });
+  // 初期ロード：fetchを試す（失敗してもOK、ファイル選択で確実に読める）
+  (async () => {
+    try{
+      await loadCSVByFetch();
+    }catch(e){
+      setStatus("未読み込み（右上の「CSVを選択（確実）」で読み込んでください）");
+      allItems = [];
+      applyFilterAndRender();
+    }
+  })();
 </script>
 </body>
 </html>
-``
