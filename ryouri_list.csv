@@ -1,4 +1,4 @@
-#,料理名,評価,URL,画像名
-1,手羽元のグリル,5,https://cookpad.com/jp/recipes/20797856,teba.jpg
-2,煮物,3,https://gyousu.love/sauce-for-simmered-food/,
-3,いわしのトマト煮込み,2,https://cookpad.com/jp/recipes/21448718,iwashi.png
+#,料理名,評価,URL,画像名,タグ
+1,手羽元のグリル,5,https://cookpad.com/jp/recipes/20797856,teba.jpg,"チキン グリル 洋"
+2,煮物,3,https://gyousu.love/sauce-for-simmered-food/,,"和 煮物"
+3,いわしのトマト煮込み,2,https://cookpad.com/jp/recipes/21448718,iwashi.png,"洋 いわし 煮込み"

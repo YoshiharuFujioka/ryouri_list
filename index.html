@@ -14,6 +14,8 @@
       --previewH: 280px;
       --radius: 12px;
       --blue:#0b57d0;
+      --chip:#eef3ff;
+      --chipText:#1b3a8a;
     }
     body{
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
@@ -74,6 +76,63 @@
       box-shadow: var(--shadow);
     }
 
+    .tagPanel{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .tagBox{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:10px;
+      box-shadow: var(--shadow);
+      padding:10px 12px;
+      min-width: 320px;
+      max-width: 820px;
+    }
+    .tagBoxHeader{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .tagBoxHeader .left{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .tagList{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      max-height: 140px;
+      overflow:auto;
+      padding-right:4px;
+    }
+    .tagItem{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      border:1px solid #e5e5e5;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .tagItem input{ margin:0; }
+    .tagMode{
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:13px;
+      background:#fff;
+    }
+
     .status{
       margin: 0 0 14px;
       color:#333;
@@ -101,13 +160,13 @@
       overflow:hidden;
     }
     .card-head{
-      padding:10px 12px 6px;
+      padding:10px 12px 8px;
       border-bottom:1px solid #eee;
     }
     .title{
       font-weight:700;
       font-size:16px;
-      margin:0 0 4px;
+      margin:0 0 6px;
       line-height:1.25;
     }
     .meta{
@@ -117,12 +176,31 @@
       align-items:center;
       color:var(--muted);
       font-size:12px;
+      margin-bottom:6px;
     }
     .stars{
       font-size:13px;
       color:#111;
       letter-spacing:.5px;
     }
+
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:6px;
+    }
+    .chip{
+      background:var(--chip);
+      color:var(--chipText);
+      border:1px solid #d9e4ff;
+      border-radius:999px;
+      padding:4px 8px;
+      font-size:11px;
+      line-height:1;
+      white-space:nowrap;
+    }
+
     .link{
       display:block;
       padding:8px 12px;
@@ -141,7 +219,7 @@
       background:#111;
     }
 
-    /* 画像優先表示 */
+    /* 画像優先表示：全体が収まるように contain */
     .imgwrap{
       width:100%;
       height:100%;
@@ -149,15 +227,15 @@
       align-items:center;
       justify-content:center;
       background:#111;
+      padding:8px;
     }
     .imgwrap img{
-      width:100%;
-      height:100%;
+      max-width:100%;
+      max-height:100%;
       object-fit:contain;
       display:block;
     }
 
-    /* iframeプレビュー */
     iframe{
       width:100%;
       height:100%;
@@ -187,13 +265,32 @@
   </header>
 
   <div class="bar">
-    <input id="q" type="text" placeholder="検索（料理名 / URL）" />
+    <input id="q" type="text" placeholder="検索（料理名 / URL / タグ）" />
     <select id="sort">
       <option value="no">並び：#順</option>
       <option value="ratingDesc">並び：評価（高→低）</option>
       <option value="ratingAsc">並び：評価（低→高）</option>
       <option value="title">並び：料理名（あいうえお）</option>
     </select>
+  </div>
+
+  <div class="tagPanel">
+    <div class="tagBox">
+      <div class="tagBoxHeader">
+        <div class="left">
+          <strong style="font-size:13px;">タグ絞り込み</strong>
+          <select id="tagMode" class="tagMode" title="複数タグ選択時の条件">
+            <option value="OR">OR（いずれか）</option>
+            <option value="AND">AND（すべて含む）</option>
+          </select>
+          <button class="btn" id="clearTags" type="button">タグ解除</button>
+        </div>
+        <div class="muted" style="font-size:12px;">
+          選択中：<span id="tagSelectedCount">0</span>
+        </div>
+      </div>
+      <div class="tagList" id="tagList"></div>
+    </div>
   </div>
 
   <div class="status" id="status">
@@ -203,7 +300,7 @@
   <main class="grid" id="grid"></main>
 
   <div class="note">
-    <strong>仕様:</strong> CSVに画像名があれば <code>ryouri_image/画像名</code> を優先表示します。画像名が空（または画像が存在しない）場合はURLをiframeで表示します。<br/>
+    <strong>仕様:</strong> CSVに画像名があれば <code>ryouri_image/画像名</code> を優先表示。画像名が空（または画像が存在しない）場合はURLをiframeで表示します。<br/>
     <strong>注意:</strong> サイト側が埋め込みを禁止していると iframe は表示されない場合があります（その場合はリンクから別タブで開いてください）。<br/>
     <strong>ヒント:</strong> <code>file://</code> 直開きだとfetchが失敗しがちなので、「CSVを選択（確実）」が一番確実です。
   </div>
@@ -216,6 +313,11 @@
   const IMAGE_DIR = "ryouri_image"; // フォルダ名（末尾スラッシュ不要）
 
   const statusEl = document.getElementById('status');
+  const tagListEl = document.getElementById('tagList');
+  const tagSelectedCountEl = document.getElementById('tagSelectedCount');
+
+  // 選択されたタグ（表示用ラベルのまま保持）
+  const selectedTags = new Set();
 
   function setStatus(msg, isError=false){
     statusEl.innerHTML = "ステータス： " + (isError
@@ -274,6 +376,15 @@
     return map;
   }
 
+  // タグ文字列（例: "チキン グリル 洋"）を配列に
+  function parseTags(tagStr){
+    if (!tagStr) return [];
+    // 全角スペースも区切りにする
+    const s = String(tagStr).replace(/\u3000/g, ' ').trim();
+    if (!s) return [];
+    return s.split(/\s+/).filter(Boolean);
+  }
+
   function csvToItems(text){
     const rows = parseCSV(String(text).trim());
     if (!rows.length) return [];
@@ -284,14 +395,13 @@
     const header = rows[0].map(x => (x ?? '').trim());
     const idx = normalizeHeaders(header);
 
-    // 必須列（ヘッダあり前提）
     const hasHeader = header.includes('料理名') && header.includes('評価') && header.includes('URL');
     if (!hasHeader){
       setStatus("CSVヘッダが想定と違います（料理名/評価/URL が見つかりません）", true);
     }
 
-    // 画像名列
     const imgIdx = header.indexOf('画像名');
+    const tagIdx = header.indexOf('タグ');
 
     const dataRows = rows.slice(1);
     const items = [];
@@ -306,7 +416,11 @@
 
       let img = '';
       if (imgIdx >= 0) img = r[imgIdx] ?? '';
-      else if (r.length >= 5) img = r[4] ?? ''; // 念のためヘッダ無し/欠損にも対応
+      else if (r.length >= 5) img = r[4] ?? '';
+
+      let tagsRaw = '';
+      if (tagIdx >= 0) tagsRaw = r[tagIdx] ?? '';
+      const tags = parseTags(tagsRaw);
 
       if (!url) continue;
 
@@ -315,30 +429,111 @@
         title: (title ?? '').trim(),
         rating: (rating ?? '').trim(),
         url: (url ?? '').trim(),
-        imageName: (img ?? '').trim()
+        imageName: (img ?? '').trim(),
+        tags
       });
     }
     return items;
   }
 
   // =======================
-  // 表示（検索・ソート）
+  // タグUIの生成
+  // =======================
+  function buildTagFilterUI(items){
+    // すべてのタグを集めてユニーク化
+    const set = new Set();
+    for (const it of items){
+      for (const t of (it.tags || [])) set.add(t);
+    }
+    const tags = Array.from(set).sort((a,b) => a.localeCompare(b, 'ja'));
+
+    tagListEl.innerHTML = '';
+    selectedTags.clear();
+    updateSelectedCount();
+
+    if (!tags.length){
+      const msg = document.createElement('div');
+      msg.className = 'muted';
+      msg.style.fontSize = '12px';
+      msg.textContent = 'タグがありません';
+      tagListEl.appendChild(msg);
+      return;
+    }
+
+    for (const tag of tags){
+      const label = document.createElement('label');
+      label.className = 'tagItem';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = tag;
+      cb.addEventListener('change', () => {
+        if (cb.checked) selectedTags.add(tag);
+        else selectedTags.delete(tag);
+        updateSelectedCount();
+        applyFilterAndRender();
+      });
+
+      const span = document.createElement('span');
+      span.textContent = tag;
+
+      label.appendChild(cb);
+      label.appendChild(span);
+      tagListEl.appendChild(label);
+    }
+  }
+
+  function updateSelectedCount(){
+    tagSelectedCountEl.textContent = String(selectedTags.size);
+  }
+
+  function clearTagSelections(){
+    selectedTags.clear();
+    // UIのチェックを外す
+    tagListEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    updateSelectedCount();
+    applyFilterAndRender();
+  }
+
+  document.getElementById('clearTags').addEventListener('click', clearTagSelections);
+  document.getElementById('tagMode').addEventListener('change', applyFilterAndRender);
+
+  // =======================
+  // 表示（検索・ソート・タグフィルタ）
   // =======================
   let allItems = [];
 
   function applyFilterAndRender(){
     const q = document.getElementById('q').value.trim().toLowerCase();
     const sort = document.getElementById('sort').value;
+    const tagMode = document.getElementById('tagMode').value; // OR / AND
+    const selected = Array.from(selectedTags);
 
     let items = allItems.slice();
 
+    // テキスト検索：料理名 / URL / タグ
     if (q){
-      items = items.filter(it =>
-        (it.title || '').toLowerCase().includes(q) ||
-        (it.url || '').toLowerCase().includes(q)
-      );
+      items = items.filter(it => {
+        const t = (it.title || '').toLowerCase();
+        const u = (it.url || '').toLowerCase();
+        const tags = (it.tags || []).join(' ').toLowerCase();
+        return t.includes(q) || u.includes(q) || tags.includes(q);
+      });
     }
 
+    // タグ絞り込み
+    if (selected.length){
+      items = items.filter(it => {
+        const tags = new Set(it.tags || []);
+        if (tagMode === 'AND'){
+          return selected.every(s => tags.has(s));
+        } else {
+          return selected.some(s => tags.has(s));
+        }
+      });
+    }
+
+    // ソート
     items.sort((a,b) => {
       const ra = parseInt(a.rating,10) || 0;
       const rb = parseInt(b.rating,10) || 0;
@@ -364,7 +559,7 @@
       empty.style.color = "#666";
       empty.style.fontSize = "13px";
       empty.style.padding = "8px";
-      empty.textContent = "データがありません。右上の「CSVを選択（確実）」からCSVを読み込んでください。";
+      empty.textContent = "表示できるデータがありません（検索/タグ条件を見直してください）。";
       grid.appendChild(empty);
       return;
     }
@@ -377,12 +572,16 @@
 
       const head = document.createElement('div');
       head.className = 'card-head';
+
+      const chipsHtml = (it.tags || []).map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+
       head.innerHTML = `
         <p class="title">${escapeHtml(it.title)}</p>
         <div class="meta">
           <span class="stars">${escapeHtml(label)}（${escapeHtml(stars)}）</span>
           <span>#${escapeHtml(it.no)}</span>
         </div>
+        <div class="chips">${chipsHtml}</div>
       `;
 
       const link = document.createElement('a');
@@ -395,7 +594,7 @@
       const preview = document.createElement('div');
       preview.className = 'preview';
 
-      // ★仕様：画像名があれば画像優先。画像が無ければ iframe にフォールバック
+      // 画像名があれば画像優先。画像が無ければ iframe にフォールバック
       if (it.imageName){
         const imgPath = `${IMAGE_DIR}/${it.imageName}`;
         const imgwrap = document.createElement('div');
@@ -405,7 +604,6 @@
         img.alt = it.title || 'image';
         img.src = imgPath;
 
-        // 画像が存在しない場合のみ iframe に切り替え
         img.addEventListener('error', () => {
           preview.innerHTML = '';
           preview.appendChild(buildIFramePreview(it.url));
@@ -424,9 +622,7 @@
     }
   }
 
-  // =======================
-  // iframeプレビュー（タイムアウト/オーバーレイ無し版）
-  // =======================
+  // iframeプレビュー（シンプル版）
   function buildIFramePreview(url){
     const frame = document.createElement('iframe');
     frame.loading = 'lazy';
@@ -444,6 +640,7 @@
     if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
     const text = await res.text();
     allItems = csvToItems(text);
+    buildTagFilterUI(allItems);
     setStatus(`fetch読み込み完了：${allItems.length}件`);
     applyFilterAndRender();
   }
@@ -452,6 +649,7 @@
     setStatus(`ファイルから読み込み中：${file.name}`);
     const text = await file.text();
     allItems = csvToItems(text);
+    buildTagFilterUI(allItems);
     setStatus(`ファイル読み込み完了：${allItems.length}件（${file.name}）`);
     applyFilterAndRender();
   }
@@ -480,6 +678,7 @@
     }catch(e){
       setStatus("未読み込み（右上の「CSVを選択（確実）」で読み込んでください）");
       allItems = [];
+      buildTagFilterUI(allItems);
       applyFilterAndRender();
     }
   })();
