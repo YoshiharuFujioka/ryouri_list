@@ -80,18 +80,46 @@
       display:flex;
       gap:10px;
       flex-wrap:wrap;
-      align-items:center;
+      align-items:flex-start;
       margin-bottom:12px;
     }
+
+    /* 折りたたみ（details/summary）用 */
     .tagBox{
       background:#fff;
       border:1px solid var(--border);
       border-radius:10px;
       box-shadow: var(--shadow);
-      padding:10px 12px;
+      padding:0;               /* details内で管理 */
       min-width: 320px;
       max-width: 820px;
+      width: fit-content;
     }
+
+    .tagSummary{
+      list-style:none;
+      cursor:pointer;
+      user-select:none;
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .tagSummary::-webkit-details-marker { display:none; } /* Safari用 */
+
+    .tagSummaryLeft{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .tagBoxInner{
+      padding:10px 12px;
+      border-top:1px solid #eee;
+    }
+
     .tagBoxHeader{
       display:flex;
       justify-content:space-between;
@@ -105,6 +133,7 @@
       align-items:center;
       flex-wrap:wrap;
     }
+
     .tagList{
       display:flex;
       flex-wrap:wrap;
@@ -133,6 +162,10 @@
       background:#fff;
     }
 
+    /* 開閉状態の視覚化 */
+    .tagBox[open] .tagSummaryHint::after{ content:" ▲"; }
+    .tagBox:not([open]) .tagSummaryHint::after{ content:" ▼"; }
+
     .status{
       margin: 0 0 14px;
       color:#333;
@@ -144,7 +177,6 @@
       padding:8px 10px;
       box-shadow: var(--shadow);
     }
-    .status .muted{ color:var(--muted); }
 
     .grid{
       display:grid;
@@ -250,6 +282,9 @@
       font-size:12px;
       line-height:1.6;
     }
+
+    .muted{ color: var(--muted); }
+
     code{ background:#f0f0f0; padding:0 4px; border-radius:4px; }
   </style>
 </head>
@@ -274,23 +309,32 @@
     </select>
   </div>
 
+  <!-- タグ絞り込み：普段は閉じた状態 -->
   <div class="tagPanel">
-    <div class="tagBox">
-      <div class="tagBoxHeader">
-        <div class="left">
+    <details class="tagBox" id="tagDetails">
+      <summary class="tagSummary">
+        <div class="tagSummaryLeft">
           <strong style="font-size:13px;">タグ絞り込み</strong>
-          <select id="tagMode" class="tagMode" title="複数タグ選択時の条件">
-            <option value="OR">OR（いずれか）</option>
-            <option value="AND">AND（すべて含む）</option>
-          </select>
-          <button class="btn" id="clearTags" type="button">タグ解除</button>
+          <span class="muted" style="font-size:12px;">
+            （選択中：<span id="tagSelectedCount">0</span>）
+          </span>
         </div>
-        <div class="muted" style="font-size:12px;">
-          選択中：<span id="tagSelectedCount">0</span>
+        <span class="tagSummaryHint muted" style="font-size:12px;">クリックで開く/閉じる</span>
+      </summary>
+
+      <div class="tagBoxInner">
+        <div class="tagBoxHeader">
+          <div class="left">
+            <select id="tagMode" class="tagMode" title="複数タグ選択時の条件">
+              <option value="OR">OR（いずれか）</option>
+              <option value="AND">AND（すべて含む）</option>
+            </select>
+            <button class="btn" id="clearTags" type="button">タグ解除</button>
+          </div>
         </div>
+        <div class="tagList" id="tagList"></div>
       </div>
-      <div class="tagList" id="tagList"></div>
-    </div>
+    </details>
   </div>
 
   <div class="status" id="status">
@@ -315,6 +359,7 @@
   const statusEl = document.getElementById('status');
   const tagListEl = document.getElementById('tagList');
   const tagSelectedCountEl = document.getElementById('tagSelectedCount');
+  const tagDetailsEl = document.getElementById('tagDetails');
 
   // 選択されたタグ（表示用ラベルのまま保持）
   const selectedTags = new Set();
@@ -358,6 +403,7 @@
     return rows;
   }
 
+  // ✅ 正しいHTMLエスケープ（重要）
   function escapeHtml(s){
     return String(s ?? '').replace(/[&<>"']/g, m => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -493,6 +539,9 @@
     tagListEl.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
     updateSelectedCount();
     applyFilterAndRender();
+
+    // 任意：タグ解除後に自動で折りたたむ（要らなければこの1行を削除）
+    tagDetailsEl?.removeAttribute('open');
   }
 
   document.getElementById('clearTags').addEventListener('click', clearTagSelections);
@@ -573,7 +622,9 @@
       const head = document.createElement('div');
       head.className = 'card-head';
 
-      const chipsHtml = (it.tags || []).map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+      const chipsHtml = (it.tags || [])
+        .map(t => `<span class="chip">${escapeHtml(t)}</span>`)
+        .join('');
 
       head.innerHTML = `
         <p class="title">${escapeHtml(it.title)}</p>
