@@ -1,8 +1,8 @@
 #,料理名,評価,URL,画像名,タグ
 1,エビマヨ,4,https://www.kurashiru.com/recipes/83b4308b-3d1c-4a22-939d-9baae3e0126a#google_vignette,compressed_thumbnail_square_large.jpg,"洋 エビ"
 2,鶏のトマトクリーム煮,4,https://cookpad.com/jp/recipes/19784254,19784254.png,"鶏 トマト 洋"
-3,オムレツ,3,https://discord.com/channels/1171436682768306206/1366415510412988526/1372731588206661643,omuretu6885.JPG,"洋"
-4,ヤンニョムチキン,5,https://discord.com/channels/1171436682768306206/1366415510412988526/1403735798813167649,compressed_thumbnail_square_large2.jpg,"韓国 鶏 辛い"
+3,オムレツ,3,https://www.sirogohan.com/sp/recipe/omuretu/,omuretu6885.JPG,"洋"
+4,ヤンニョムチキン,5,https://www.kurashiru.com/recipes/e70b4031-e6f5-438b-b7f7-2d1cf6ba090b,compressed_thumbnail_square_large2.jpg,"韓国 鶏 辛い"
 5,麻婆豆腐,4,https://cookpad.com/jp/recipes/18556435,18556435.png,"中華"
 6,トマトと大葉のマリネ,4,https://oceans-nadia.com/user/22780/recipe/169116,34175cb8e091.JPG,"トマト 洋"
 7,回鍋肉,4,https://cookpad.com/jp/recipes/18333675,18333675.png,"中華"
@@ -10,3 +10,7 @@
 9,ワカモレ,5,https://www.kurashiru.com/recipes/0869b63b-027c-4d68-9d67-e446eb051252,compressed_thumbnail_square_large3.jpg,"洋 アボカド"
 10,煮物,3,https://gyousu.love/sauce-for-simmered-food/,sauce-for-simmered-food.jpg,"和 煮物 業務スーパー"
 11,手羽元グリル,5,https://cookpad.com/jp/recipes/20797856,teba.jpg,"チキン グリル 洋"
+12,小エビのカクテルサラダ,5,https://bazurecipe.com/2024/07/29/小エビのカクテルサラダ/,S__104275974_0-768x432.jpg,"サイゼリア"
+13,もつ煮,5,https://tuberecipe.com/recipe/5581/detail,mqdefault.jpg,"サイゼリア"
+14,業スー米粉料理,3,https://www.youtube.com/watch?v=safR4AqMdrY&list=PLEztBJXdwVwMLJjfvpfBWb8T5NkCfK-jW&index=22,komeko.png,"業務スーパー 米粉"
+15,うずら卵煮,4,https://youtube.com/shorts/X_GqBXUzgOo?si=pV_-daaEKMWiRQbF,maxresdefault.jpg,"業務スーパー 米粉"
