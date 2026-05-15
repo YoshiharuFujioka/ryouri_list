@@ -1,25 +1,29 @@
-# 料理お気に入りアプリ セットアップ手順
+# 料理お気に入りアプリ
 
-## 1. プロジェクト作成
+お気に入りのレシピ・料理動画を管理するアプリです。  
+URLを入力するだけでサムネイルを自動取得し、タグ・評価・メモと一緒に保存できます。
 
-```bash
-npx create-next-app@latest ryouri-list --typescript --tailwind --app --src-dir=false
-cd ryouri-list
-npm install @supabase/supabase-js
-```
+## 技術スタック
+
+- **フロントエンド / API**: Next.js 14 (App Router)
+- **データベース**: Supabase (PostgreSQL)
+- **画像ストレージ**: Supabase Storage
+- **ホスティング**: Vercel
 
 ---
 
-## 2. Supabase セットアップ
+## セットアップ手順
 
-### 2-1. プロジェクト作成
+### 1. Supabase セットアップ
+
+#### 1-1. プロジェクト作成
 1. https://supabase.com にアクセスしてログイン
 2. 「New Project」でプロジェクト作成
-3. **Project URL** と **anon key** をメモ
+3. **Project URL** と **anon key** をメモ（Settings → API）
 
-### 2-2. テーブル作成
-Supabase の SQL Editor で以下を実行：
- →SQL Editerで以下をコピペして実行
+#### 1-2. テーブル作成
+SQL Editor で以下をコピペして実行：
+
 ```sql
 create extension if not exists "uuid-ossp";
 
@@ -34,18 +38,16 @@ create table recipes (
   created_at timestamptz default now()
 );
 
--- 全件読み取り・書き込みを許可（個人利用想定）
 alter table recipes enable row level security;
 create policy "allow all" on recipes for all using (true) with check (true);
 ```
 
-### 2-3. Storage バケット作成
-Supabase の Storage メニューで：
-1. 「New bucket」→ 名前: `recipe-images`
+#### 1-3. Storage バケット作成
+1. Storage メニューで「New bucket」→ 名前: `recipe-images`
 2. **Public bucket** にチェック ✅
 
-Storage の Policies で以下を実行：
- →SQL Editerで以下をコピペして実行
+SQL Editor で以下をコピペして実行：
+
 ```sql
 create policy "public read" on storage.objects for select using (bucket_id = 'recipe-images');
 create policy "allow upload" on storage.objects for insert with check (bucket_id = 'recipe-images');
@@ -54,34 +56,63 @@ create policy "allow delete" on storage.objects for delete using (bucket_id = 'r
 
 ---
 
-## 3. 環境変数
+### 2. Vercel デプロイ
 
-プロジェクトルートに `.env.local` を作成：
+1. https://vercel.com でGitHubアカウントでログイン
+2. 「Add New → Project」→ このリポジトリを選択して「Import」
+3. **Environment Variables** に以下を追加：
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+| Name                            | Value                 |
+| ------------------------------- | --------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | SupabaseのProject URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabaseのanon key    |
+
+4. 「Deploy」をクリック
+
+---
+
+### 3. 更新方法
+
+GitHubのファイルを直接編集してCommitするだけで、Vercelが自動で再デプロイします。  
+ローカル環境は不要です。
+
+---
+
+## フォルダ構成
+
+```
+ryouri_list/
+├── README.md
+├── package.json
+├── tsconfig.json
+├── tailwind.config.ts
+├── postcss.config.js
+├── app/
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx                        # メインページ（一覧・検索・フィルタ）
+│   └── api/
+│       ├── fetch-thumbnail/
+│       │   └── route.ts                # YouTube/Vimeo/OGPサムネ取得
+│       ├── upload-image/
+│       │   └── route.ts                # 画像→Supabase Storage保存
+│       └── recipes/
+│           ├── route.ts                # レシピ一覧取得・新規追加
+│           └── [id]/
+│               └── route.ts            # レシピ更新・削除
+├── components/
+│   ├── RecipeCard.tsx                  # カード表示コンポーネント
+│   └── RecipeForm.tsx                  # 追加・編集フォーム
+└── lib/
+    └── supabase.ts                     # Supabaseクライアント・型定義
 ```
 
 ---
 
-## 4. Vercel デプロイ
+## 主な機能
 
-```bash
-# GitHubにpush
-git add .
-git commit -m "initial commit"
-git push origin main
-```
-
-1. https://vercel.com でリポジトリをインポート
-2. Environment Variables に `.env.local` の2つを追加
-3. Deploy
-
----
-
-## 5. CSVからの移行（任意）
-
-既存の `ryouri_list.csv` を移行する場合、
-Supabase の Table Editor で「Insert rows」からCSVインポートが可能です。
-（画像はURLが空になるので、アプリから再登録してください）
+- URLからサムネイル自動取得（YouTube・Vimeo・一般レシピサイト対応）
+- レシピをカード形式で一覧表示
+- タグ・評価・料理名での検索・フィルタ・ソート
+- レシピの追加・編集・削除
+- 画像はSupabase Storageに自動保存
